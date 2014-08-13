@@ -61,4 +61,21 @@ def test_dexpm_wsp():
     print p
     print
 
+def test_dexpm_slice():
+    q = np.array([
+        [[-1,1,0,0],
+         [0,-1,1,0],
+         [0,0,-1,1],
+         [0,0,0,0]],
+        [[-2,2,0,0],
+         [0,-2,2,0],
+         [0,0,-2,2],
+         [0,0,0,0]]], dtype=np.double, order='C')
+    p = np.empty(q.shape, dtype=np.double, order='C')
+    cdef double[:,:,:] qview = q
+    cdef double[:,:,:] pview = p
+    cdef double t = 1.0
+    cdef int n = 4
+    f_dexpm(n, &qview[0,0,0], t, &pview[0,0,0])
+    return p
     

@@ -67,7 +67,7 @@ def parse(data, ttable=None, treename=None):
 
     Returns: the root node.
     """
-    from tree import Node
+    from tree import Node, Tree
     
     if type(data) in types.StringTypes:
         data = StringIO(data)
@@ -98,7 +98,6 @@ def parse(data, ttable=None, treename=None):
             newnode = Node()
             newnode.ni = ni; ni += 1
             ## newnode.isleaf = False
-            newnode.ii = ii; ii += 1
             newnode.treename = treename
             if node:
                 if node.children: newnode.left = node.children[-1].right+1
@@ -112,7 +111,6 @@ def parse(data, ttable=None, treename=None):
         elif token == ')':
             rp = rp+1
             node = node.parent
-            node.pi = pi; pi += 1
             if node.children:
                 node.right = node.children[-1].right + 1
             
@@ -163,10 +161,8 @@ def parse(data, ttable=None, treename=None):
                         token = ttoken
                 newnode = Node()
                 newnode.ni = ni; ni += 1
-                newnode.pi = pi; pi += 1
                 newnode.label = "_".join(token.split()).replace("'", "")
                 ## newnode.isleaf = True
-                newnode.li = li; li += 1
                 if node.children: newnode.left = node.children[-1].right+1
                 else: newnode.left = node.left+1
                 newnode.right = newnode.left+1
@@ -183,52 +179,6 @@ def parse(data, ttable=None, treename=None):
     ## node.isroot = True
     return node
 
-## def string(node, length_fmt=":%s", end=True, newline=True):
-##     "Recursively create a newick string from node."
-##     if not node.isleaf:
-##         node_str = "(%s)%s" % \
-##                    (",".join([ string(child, length_fmt, False, newline) \
-##                                for child in node.children ]),
-##                     node.label or ""
-##                     )
-##     else:
-##         node_str = "%s" % node.label
-
-##     if node.length is not None:
-##         length_str = length_fmt % node.length
-##     else:
-##         length_str = ""
-
-##     semicolon = ""
-##     if end:
-##         if not newline:
-##             semicolon = ";"
-##         else:
-##             semicolon = ";\n"
-##     s = "%s%s%s" % (node_str, length_str, semicolon)
-##     return s
-
-## def from_nexus(infile, bufsize=None):
-##     bufsize = bufsize or 1024*5000
-##     TTABLE = re.compile(r'\btranslate\s+([^;]+);', re.I | re.M)
-##     TREE = re.compile(r'\btree\s+([_.\w]+)\s*=[^(]+(\([^;]+;)', re.I | re.M)
-##     s = infile.read(bufsize)
-##     ttable = TTABLE.findall(s) or None
-##     if ttable:
-##         items = [ shlex.split(line) for line in ttable[0].split(",") ]
-##         ttable = dict([ (k, v.replace(" ", "_")) for k, v in items ])
-##     trees = TREE.findall(s)
-##     ## for i, t in enumerate(trees):
-##     ##     t = list(t)
-##     ##     if ttable:
-##     ##         t[1] = "".join(
-##     ##             [ ttable.get(x, "_".join(x.split()).replace("'", ""))
-##     ##               for x in shlex.shlex(t[1]) ]
-##     ##             )
-##     ##     trees[i] = t
-##     ## return trees
-##     return ttable, trees
-    
 def parse_ampersand_comment(s):
     import pyparsing
     pyparsing.ParserElement.enablePackrat()

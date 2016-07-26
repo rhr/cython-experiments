@@ -51,6 +51,7 @@ cdef class Node(object):
         if p is not None:
             if lsib is None and rsib is None:
                 # self is the only child of parent
+                self.parent = None
                 return p
             if lsib is None and rsib is not None:
                 # self is the first child of parent
@@ -134,6 +135,7 @@ cdef class Tree(object):
         self.rightsib = np.empty(self.nnodes, dtype=np.intp)
         self.nchildren = np.empty(self.nnodes, dtype=np.int32)
         self.postorder = np.empty(self.nnodes, dtype=np.intp)
+        self.postith = np.empty(self.nnodes, dtype=np.intp)
         self.length = np.empty(self.nnodes, dtype=np.double)
         self.label = []
         self.index(root)
@@ -157,6 +159,41 @@ cdef class Tree(object):
         
         for i, n in enumerate(root.postiter()):
             self.postorder[i] = n.ni
+            self.postith[n.ni] = i
+
+    def leaf_labels(self, int node=0, order='pre'):
+        cdef Py_ssize_t i
+        if order == 'pre':
+            return [ self.label[i] for i in range(self.nnodes)
+                     if self.nchildren[i]==0 ]
+        return [ self.label[i] for i in self.postorder if self.nchildren[i]==0 ]
+
+    cdef int subtree_nnodes(self, Py_ssize_t node):
+        'number of nodes in subtree of node, including node'
+        # 0 <= node < self.nnodes
+        cdef Py_ssize_t i, stop = self.postith[node]
+        cdef int n = 1
+        if self.nchildren[node] == 0:
+            return 1
+        i = node + 1
+        while self.postith[i] < stop:
+            n += 1
+            i += 1
+        return n
+
+    cdef int subtree_nleaves(self, Py_ssize_t node):
+        'number of leaves in subtree of node'
+        # 0 <= node < self.nnodes
+        cdef Py_ssize_t i, stop = self.postith[node]
+        cdef int n = 0
+        if self.nchildren[node] == 0:
+            return 0
+        i = node + 1
+        while self.postith[i] < stop:
+            if self.nchildren[i] == 0:
+                n += 1
+            i += 1
+        return n
 
     cpdef double rootpathlen(self, Py_ssize_t i, Py_ssize_t j=0):
         cdef double x = 0
@@ -166,6 +203,36 @@ cdef class Tree(object):
             x += self.length[i]
             i = self.parent[i]
         return x
+
+    def preiter(self, Py_ssize_t node=0, includeroot=True):
+        'generate preorder indices of descendants from node'
+        # 0 <= node < self.nnodes
+        # node is the preorder index
+        cdef Py_ssize_t i, stop = self.postith[node]-1
+        if includeroot:
+            yield node
+        if self.nchildren[node] == 0:
+            raise StopIteration
+        for i in range(node+1, self.nnodes):
+            yield i
+            if self.postith[i] == stop:
+                raise StopIteration
+
+    def postiter(self, Py_ssize_t node=0, includeroot=True):
+        'generate preorder indices from a postorder traversal of node'
+        # 0 <= node < self.nnodes
+        # node is the preorder index
+        cdef Py_ssize_t c, i
+        if self.nchildren[node] == 0:
+            yield node
+            raise StopIteration
+        c = self.leftchild[node]
+        while self.nchildren[c] > 0:
+            c = self.leftchild[c]
+        for i in range(self.postith[c], self.postith[node]):
+            yield self.postorder[i]
+        if includeroot:
+            yield node
 
 # Example functions: calculate the number of tips for each node
 # recursive array indexing
@@ -223,3 +290,14 @@ cpdef cladesizes4(Tree t, np.int_t[:] sizes):
         for j in range(nc):
             sizes[node] += sizes[child]
             child = t.rightsib[child]
+
+
+cpdef np.double_t[:] nodeheights(Tree t):
+    'node heights above root (tree growing upward)'
+    cdef Py_ssize_t node, parent
+    cdef np.double_t[:] heights = np.empty(t.nnodes, dtype=np.double)
+    heights[0] = 0
+    for node in range(1, t.nnodes):
+        parent = t.parent[node]
+        heights[node] = t.length[node] + heights[parent]
+    return heights

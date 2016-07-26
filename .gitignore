@@ -6,6 +6,7 @@ build
 
 # C extensions
 *.so
+*.o
 
 # Packages
 *.egg

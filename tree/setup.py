@@ -12,7 +12,7 @@ extensions = [
         ),
     Extension(
         'odeiv',
-        ['odeiv.pyx'],
+        ['odeiv.c'],
         libraries = ['gsl', 'blas']
         ),
     Extension('tree', ['tree.c']),
